@@ -139,7 +139,7 @@ export default function AIChat() {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Open SmartSurround AI"
       >
-        🤖
+        <img src="/favicon.svg" alt="SmartSurround logo" />
       </button>
     </>
   );

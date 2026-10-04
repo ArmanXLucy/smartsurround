@@ -250,6 +250,7 @@ export default function LiveReadingPage({ currentUser, onLogout, onBackToSite, o
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            user_id: currentUser.id,
             name: currentUser.name || "",
             email: currentUser.email || "",
             status: "Working",
@@ -274,6 +275,7 @@ export default function LiveReadingPage({ currentUser, onLogout, onBackToSite, o
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            user_id: currentUser.id,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
@@ -931,8 +933,9 @@ export default function LiveReadingPage({ currentUser, onLogout, onBackToSite, o
               </AnimatePresence>
             </div>
 
-            <button type="button" className="secondary-button" onClick={onBackToSite}>
-              Back to Site
+            <button type="button" className="secondary-button live-back-to-site" onClick={onBackToSite}>
+              <ArrowUpRight className="live-back-to-site-icon" size={15} aria-hidden="true" />
+              <span>Back to Site</span>
             </button>
 
             <button

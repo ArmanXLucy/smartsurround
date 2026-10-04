@@ -6183,17 +6183,26 @@ svg {
 @media (max-width: 768px) {
 
   .live-sidebar {
-    overflow: hidden !important;
+    /* Keep the whole existing brand/nav available on short phone screens. */
+    z-index: 100;
+    padding-top: 76px;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
   }
 
   .live-sidebar.open {
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .live-sidebar .side-logo {
+    flex-shrink: 0;
   }
 
   .live-sidebar-close {
     display: flex;
     position: absolute;
-    top: 18px;
+    top: 78px;
     right: 18px;
 
     width: 40px;
@@ -7983,7 +7992,7 @@ svg {
   }
 
   .account-dropdown {
-    right: -4px;
+    right: -44px;
   }
 
   .account-profile-hero {
@@ -8001,6 +8010,89 @@ svg {
   .account-confirm-actions button {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* =========================================================
+   MOBILE TOPBAR
+   Keep the existing notification/profile controls usable without allowing
+   desktop labels to push the navbar beyond the viewport.
+========================================================= */
+
+.live-back-to-site-icon {
+  display: none;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  .live-topbar {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .live-topbar .dashboard-url,
+  .live-topbar .dashboard-status,
+  .live-topbar .nav-logout-button {
+    display: none;
+  }
+
+  .live-topbar-right {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .live-user.profile-trigger {
+    width: min(150px, 38vw);
+    min-width: 0;
+    height: 38px;
+    min-height: 38px;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 3px 8px 3px 3px;
+  }
+
+  .live-user.profile-trigger > span:not(.account-avatar-button) {
+    display: block;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .live-user.profile-trigger .account-trigger-chevron {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .live-back-to-site {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .live-back-to-site-icon {
+    display: block;
+  }
+
+  .notif-bell-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .notif-dropdown-menu {
+    position: fixed !important;
+    top: 70px !important;
+    right: 12px !important;
+    left: auto !important;
+    width: min(340px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 90px);
   }
 }
 
@@ -8055,9 +8147,10 @@ svg {
   color: var(--text);
   background: var(--orange);
 }
+.sc-admin-brand-mark img { width: 100%; height: 100%; display: block; border-radius: inherit; object-fit: cover; }
 .sc-admin-brand strong {
   display: block;
-  color: white;
+  color: var(--text);
   font-size: 14px;
   letter-spacing: -0.02em;
 }
@@ -8145,10 +8238,17 @@ svg {
   font-size: 11px;
   cursor: pointer;
 }
-.sc-admin-sidebar-footer > button:hover {
-  color: var(--text);
-  border-color: rgba(255,116,23,.45);
+.sc-admin-sidebar-footer > button {
+  border-color: rgba(220,38,38,.18);
+  background: rgba(239,68,68,.055);
+  color: #dc2626;
 }
+.sc-admin-sidebar-footer > button:hover {
+  color: #b91c1c;
+  border-color: rgba(220,38,38,.35);
+  background: rgba(239,68,68,.11);
+}
+.sc-admin-sidebar-footer > button svg { color: currentColor; }
 .sc-admin-sidebar-footer p {
   margin: 11px 0 0;
   color: var(--muted);
@@ -8428,6 +8528,8 @@ svg {
   border-radius:19px;
   background:white;
   box-shadow:0 12px 30px rgba(60,35,20,.04);
+  min-width: 0;
+  overflow: hidden;
 }
 .sc-admin-panel-head { display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:15px; }
 .sc-admin-panel-head h3 { margin:0;font:600 17px/1.15 "Space Grotesk",sans-serif;letter-spacing:-.02em; }
@@ -8479,6 +8581,8 @@ svg {
 .sc-admin-map {
   position:relative;
   overflow:hidden;
+  isolation:isolate;
+  z-index:0;
   border:1px solid rgba(33,20,15,.08);
   border-radius:15px;
   background:#f3eee8;
@@ -8754,7 +8858,7 @@ svg {
   .sc-admin-drawer-foot button { flex:1; }
 }
 
-.sc-admin-leaflet-map { width:100%;height:300px;min-height:300px; }
+.sc-admin-leaflet-map { position:relative; z-index:0; width:100%;height:300px;min-height:300px; }
 .sc-admin-map.large .sc-admin-leaflet-map { min-height:420px;height:420px; }
 .sc-admin-map-empty { min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;background:#f3eee8; }
 .sc-admin-map-empty svg { color:var(--orange); }
@@ -9257,17 +9361,18 @@ svg {
 .notice-modal-close:hover { color: var(--text); background: rgba(33,20,15,.04); }
 .notice-detail-image-wrap {
   width: 100%;
-  max-height: 280px;
+  height: min(55vh, 420px);
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin: 20px 0 16px;
   background: #f1ede9;
+  display: grid;
+  place-items: center;
 }
 .notice-detail-image {
   width: 100%;
   height: 100%;
-  max-height: 280px;
-  object-fit: cover;
+  object-fit: contain;
 }
 .notice-detail-pills {
   display: flex;
@@ -9404,17 +9509,31 @@ svg {
 .admin-radio-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 9px;
+  margin-top: 10px;
 }
 .admin-radio-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.72);
   font-size: 11.5px;
   cursor: pointer;
   color: var(--text);
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
+.admin-radio-label:hover { border-color: rgba(255,116,23,.4); background: rgba(255,116,23,.045); }
+.admin-radio-label.selected { border-color: rgba(255,116,23,.65); background: rgba(255,116,23,.09); box-shadow: 0 5px 14px rgba(255,116,23,.08); }
+.admin-radio-label input { width: auto; margin: 0; accent-color: var(--orange); flex: 0 0 auto; }
+.admin-radio-label > span { min-width: 0; flex: 1 1 auto; display: grid; gap: 3px; }
+.admin-radio-label > span strong { font-size: 12px; font-weight: 700; }
+.admin-radio-label > span small, .admin-audience-help { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.admin-audience-help { display: block; margin-top: 5px; }
 .admin-user-multiselect {
   max-height: 150px;
   overflow-y: auto;

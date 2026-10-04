@@ -224,8 +224,9 @@ function AccountPanel({ currentUser, section, onClose, onUserUpdated, onAppearan
       if (avatarFile) {
         try {
           photoURL = await uploadToSupabase(avatarFile);
-        } catch {
-          // Keep the profile usable even if Supabase Storage has an issue.
+        } catch (storageError) {
+          console.warn("Supabase avatar storage unavailable; using local fallback.", storageError);
+          // Keep the profile usable while Supabase Storage is being configured.
           const fallbackReader = new FileReader();
           localAvatarValue = String(await new Promise((resolve, reject) => {
             fallbackReader.onload = () => resolve(String(fallbackReader.result || ""));
@@ -254,7 +255,7 @@ function AccountPanel({ currentUser, section, onClose, onUserUpdated, onAppearan
       setProfileMessage({
         type: "success",
         text: avatarStorageFallback
-          ? "Profile saved. Avatar is stored locally because Supabase Storage is not currently available."
+          ? "Profile saved. Supabase Storage is unavailable, so the avatar is stored locally."
           : "Profile updated successfully.",
       });
     } catch (err) {

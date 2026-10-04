@@ -1,7 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const configuredSupabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || "").trim().replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+function projectRefFromAnonKey(key) {
+  try {
+    const encodedPayload = key?.split(".")[1];
+    if (!encodedPayload || typeof atob !== "function") return "";
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return String(JSON.parse(atob(padded))?.ref || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+const keyProjectRef = projectRefFromAnonKey(supabaseAnonKey);
+const keyDerivedSupabaseUrl = keyProjectRef
+  ? `https://${keyProjectRef}.supabase.co`
+  : "";
+const supabaseUrl = keyDerivedSupabaseUrl || configuredSupabaseUrl;
+
+if (configuredSupabaseUrl && keyDerivedSupabaseUrl && configuredSupabaseUrl !== keyDerivedSupabaseUrl) {
+  console.warn(
+    "Supabase URL did not match the anon key project; using the project URL from the anon key."
+  );
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
@@ -13,8 +37,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "");
 
 // ---------------------------------------------------------------------------
-// Storage helpers — wraps Supabase Storage for notice images.
-// Bucket name: "notice-images"  (create this bucket in your Supabase dashboard)
+// Supabase Storage helper for notice images and profile avatars.
 // ---------------------------------------------------------------------------
 
 const BUCKET = "notice-images";

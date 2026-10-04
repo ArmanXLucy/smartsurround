@@ -668,7 +668,7 @@ export default function AdminPage({ onBackToSite, onBackToLogin, onLogout }) {
 
       <aside className={`sc-admin-sidebar${mobileNavOpen ? " open" : ""}`}>
         <div className="sc-admin-brand">
-          <div className="sc-admin-brand-mark"><Activity size={18} /></div>
+          <div className="sc-admin-brand-mark"><img src="/favicon.svg" alt="SmartSurround logo" /></div>
           <div><strong>Smart<span>Surround</span></strong><small>ADMIN CONTROL CENTER</small></div>
         </div>
 
@@ -680,23 +680,18 @@ export default function AdminPage({ onBackToSite, onBackToLogin, onLogout }) {
             <button className={workspace === "operations" ? "active" : ""} onClick={() => setWorkspaceAndClose("operations")}><Navigation size={16} />Live Operations</button>
           </div>
           <div className="sc-admin-nav-group">
-            <span>USERS</span>
             <button className={workspace === "users" ? "active" : ""} onClick={() => setWorkspaceAndClose("users")}><UserRound size={16} />Users</button>
           </div>
           <div className="sc-admin-nav-group">
-            <span>MONITORING</span>
             <button className={workspace === "monitoring" ? "active" : ""} onClick={() => setWorkspaceAndClose("monitoring")}><Wind size={16} />Monitoring</button>
           </div>
           <div className="sc-admin-nav-group">
-            <span>INCIDENTS</span>
             <button className={workspace === "problems" ? "active" : ""} onClick={() => setWorkspaceAndClose("problems")}><AlertTriangle size={16} />Problem Desk</button>
           </div>
           <div className="sc-admin-nav-group">
-            <span>REPORTS</span>
             <button className={workspace === "reports" ? "active" : ""} onClick={() => setWorkspaceAndClose("reports")}><FileText size={16} />Reports</button>
           </div>
           <div className="sc-admin-nav-group">
-            <span>COMMUNICATIONS</span>
             <button className={workspace === "communications" ? "active" : ""} onClick={() => setWorkspaceAndClose("communications")}><Mail size={16} />Communications</button>
           </div>
           <div className="sc-admin-nav-group">

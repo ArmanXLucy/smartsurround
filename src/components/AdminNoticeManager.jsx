@@ -386,33 +386,34 @@ export default function AdminNoticeManager({
             {/* Target Audience */}
             <div className="sc-admin-field" style={{ gridColumn: "1 / -1" }}>
               <span>Target Audience</span>
+              <small className="admin-audience-help">Choose who should receive this notice.</small>
               <div className="admin-radio-group">
-                <label className="admin-radio-label">
+                <label className={`admin-radio-label${form.audienceType === "all" ? " selected" : ""}`}>
                   <input
                     type="radio"
                     name="audienceType"
                     checked={form.audienceType === "all"}
                     onChange={() => setForm({ ...form, audienceType: "all", targetUserId: "", targetUserIds: [] })}
                   />
-                  <span>All Users (Public Notice)</span>
+                  <span><strong>All Users (Public Notice)</strong><small>Sent to everyone</small></span>
                 </label>
-                <label className="admin-radio-label">
+                <label className={`admin-radio-label${form.audienceType === "specific" ? " selected" : ""}`}>
                   <input
                     type="radio"
                     name="audienceType"
                     checked={form.audienceType === "specific"}
                     onChange={() => setForm({ ...form, audienceType: "specific", targetUserIds: [] })}
                   />
-                  <span>Specific User</span>
+                  <span><strong>Specific User</strong><small>Send this notice to one user</small></span>
                 </label>
-                <label className="admin-radio-label">
+                <label className={`admin-radio-label${form.audienceType === "selected" ? " selected" : ""}`}>
                   <input
                     type="radio"
                     name="audienceType"
                     checked={form.audienceType === "selected"}
                     onChange={() => setForm({ ...form, audienceType: "selected", targetUserId: "" })}
                   />
-                  <span>Selected Users</span>
+                  <span><strong>Selected Users</strong><small>Send to chosen users</small></span>
                 </label>
               </div>
 

@@ -18,6 +18,14 @@
   transform: scale(1.05);
 }
 
+.ai-chat-button img {
+  width: 30px;
+  height: 30px;
+  display: block;
+  margin: auto;
+  border-radius: 8px;
+}
+
 .ai-chat-window {
   position: fixed;
   right: 24px;
