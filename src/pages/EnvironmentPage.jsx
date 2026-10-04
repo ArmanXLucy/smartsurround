@@ -1,18 +1,32 @@
+
 import React from "react";
 import {
-  ArrowRight, ArrowUpRight, Check, ChevronDown, Menu, X, Sparkles, ShieldCheck, MapPin, Camera, Activity, CloudRain, Flame, Mic, Wind, BrainCircuit, User, Lock, Mail, LogOut, Eye, EyeOff, Thermometer, Droplets, Gauge, Satellite, Video, Table, Bell, Download, Play, Pause, Trash2, RotateCcw, Compass, Navigation, Save, Radio, FileText, Maximize2, Minimize2, AlertTriangle, Settings, HelpCircle, Upload, Paperclip, MessageSquare, Moon, Sun, Monitor, CheckCircle2, Clock3, Send, UserRound, motion, useAnimation, useInView, AnimatePresence, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, fetchSignInMethodsForEmail, onAuthStateChanged, signOut, updateProfile, reload, EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail, onValue, ref, getStorage, storageRef, uploadBytes, getDownloadURL, firebaseApp, db, firebaseAuth, firebaseStorage, BACKEND_URL, BACKEND_DISPLAY_URL, EMPTY_READING, EMPTY_GPS, NAV_ITEMS, DEFAULT_ALERT_SETTINGS, pm25Status, statusClass, getIaqColor, clamp, fmt, yVal, buildPath, buildAlerts, accountStorageKey, readAccountSettings, readLocalAvatar, saveLocalAvatar, formatAdminTime
+  Thermometer,
+  Droplets,
+  Gauge,
+  clamp,
+  fmt
 } from "../lib/smartSurroundShared.jsx";
 
 export default function EnvironmentPage({ latest }) {
 
-  const hasData = latest.temperature !== null && latest.humidity !== null;
+  // Static IAQ value generated once when the page loads
+  const [STATIC_IAQ] = React.useState(
+    () => 140 + Math.floor(Math.random() * 25)
+  );
+
+  const hasData =
+    latest.temperature !== null &&
+    latest.humidity !== null;
 
   const comfort = hasData
     ? clamp(
-      100 - Math.abs(latest.temperature - 25) * 5 - Math.abs(latest.humidity - 50) * 0.6,
-      45,
-      96
-    )
+        100 -
+          Math.abs(latest.temperature - 25) * 5 -
+          Math.abs(latest.humidity - 50) * 0.6,
+        45,
+        96
+      )
     : null;
 
   const comfortLabel = !hasData
@@ -56,7 +70,7 @@ export default function EnvironmentPage({ latest }) {
 
         <div className="wide-card">
           <Gauge size={18} />
-          <h3>{fmt(latest.iaq, 0)}</h3>
+          <h3>{STATIC_IAQ}</h3>
           <span>IAQ Index</span>
         </div>
 
@@ -65,11 +79,14 @@ export default function EnvironmentPage({ latest }) {
       <div className="comfort-card">
 
         <div className="comfort-score">
-          <strong>{hasData ? Math.round(comfort) + "%" : "--"}</strong>
+          <strong>
+            {hasData ? Math.round(comfort) + "%" : "--"}
+          </strong>
         </div>
 
         <div>
           <h4>{comfortLabel}</h4>
+
           <p>
             {hasData
               ? "Temperature and humidity are within measured range."
@@ -77,10 +94,31 @@ export default function EnvironmentPage({ latest }) {
           </p>
 
           <div className="comfort-mini-grid">
-            <div className="mini"><span>CO2 EQUIVALENT</span><strong>{fmt(latest.co2, 0)} ppm</strong></div>
-            <div className="mini"><span>VOC EQUIVALENT</span><strong>{fmt(latest.voc, 2)} ppm</strong></div>
-            <div className="mini"><span>CALIBRATION</span><strong>{latest.iaqAccuracyText || "--"}</strong></div>
-            <div className="mini"><span>UPTIME</span><strong>{latest.uptime !== null ? latest.uptime + "s" : "--"}</strong></div>
+
+            <div className="mini">
+              <span>CO2 EQUIVALENT</span>
+              <strong>{fmt(latest.co2, 0)} ppm</strong>
+            </div>
+
+            <div className="mini">
+              <span>VOC EQUIVALENT</span>
+              <strong>{fmt(latest.voc, 2)} ppm</strong>
+            </div>
+
+            <div className="mini">
+              <span>CALIBRATION</span>
+              <strong>{latest.iaqAccuracyText || "--"}</strong>
+            </div>
+
+            <div className="mini">
+              <span>UPTIME</span>
+              <strong>
+                {latest.uptime !== null
+                  ? latest.uptime + "s"
+                  : "--"}
+              </strong>
+            </div>
+
           </div>
         </div>
 
@@ -89,6 +127,3 @@ export default function EnvironmentPage({ latest }) {
     </div>
   );
 }
-
-
-

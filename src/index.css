@@ -5362,6 +5362,7 @@ button {
 
 .toggle-switch.on {
   background: var(--orange);
+  
 }
 
 .toggle-switch.on span {
@@ -7120,7 +7121,7 @@ svg {
 }
 
 .setting-toggle-row span {
-  margin-top: 3px;
+  /* margin-top: 3px; */
   color: var(--muted);
   font-size: 10px;
   line-height: 1.45;
