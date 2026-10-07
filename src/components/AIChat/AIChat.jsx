@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./AIChat.css";
 
-const API_URL = "/api";
+const API_URL = "/ai-api";
 
 export default function AIChat() {
   const [open, setOpen] = useState(false);

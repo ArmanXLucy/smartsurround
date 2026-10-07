@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://127.0.0.1:5000",
+      "/ai-api": "http://127.0.0.1:8000",
       "/login/creds": "http://127.0.0.1:5000",
       "/auth": "http://127.0.0.1:5000",
       "/admin/": {
