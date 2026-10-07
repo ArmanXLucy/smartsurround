@@ -242,7 +242,7 @@ const parseDetectionOutput = (outputTensor) => {
    CAMERA PAGE
 ========================================================= */
 
-export default function CameraPage({ gps }) {
+export default function CameraPage({ gps, currentUser }) {
   void gps;
 
   const [selectedImage, setSelectedImage] =
@@ -260,8 +260,18 @@ export default function CameraPage({ gps }) {
   const [error, setError] =
     React.useState("");
 
-  const [submitted, setSubmitted] =
-    React.useState(false);
+  const [issueText, setIssueText] =
+    React.useState("");
+
+  // submitState: "idle" | "locating" | "submitting" | "success" | "error"
+  const [submitState, setSubmitState] =
+    React.useState("idle");
+
+  const [submitError, setSubmitError] =
+    React.useState("");
+
+  const [submittedTicketId, setSubmittedTicketId] =
+    React.useState(null);
 
   const [imageSource, setImageSource] =
     React.useState("");
@@ -368,7 +378,10 @@ export default function CameraPage({ gps }) {
     setSelectedImage(file);
     setImageSource("upload");
     setAnalysis(null);
-    setSubmitted(false);
+    setIssueText("");
+    setSubmitState("idle");
+    setSubmitError("");
+    setSubmittedTicketId(null);
     setError("");
 
     event.target.value = "";
@@ -397,7 +410,10 @@ export default function CameraPage({ gps }) {
     setAnalyzing(true);
     setError("");
     setAnalysis(null);
-    setSubmitted(false);
+    setIssueText("");
+    setSubmitState("idle");
+    setSubmitError("");
+    setSubmittedTicketId(null);
 
     try {
       /* ---------------------------------------------------
@@ -737,7 +753,10 @@ export default function CameraPage({ gps }) {
         );
 
         setAnalysis(null);
-        setSubmitted(false);
+        setIssueText("");
+        setSubmitState("idle");
+        setSubmitError("");
+        setSubmittedTicketId(null);
         setError("");
 
         stopCamera();
@@ -769,7 +788,10 @@ export default function CameraPage({ gps }) {
     setAnalysis(null);
     setImageSource("");
     setError("");
-    setSubmitted(false);
+    setIssueText("");
+    setSubmitState("idle");
+    setSubmitError("");
+    setSubmittedTicketId(null);
     setAnalyzing(false);
     setCapturing(false);
 
@@ -789,17 +811,146 @@ export default function CameraPage({ gps }) {
       .toLowerCase()
       .includes("pothole");
 
+  // The submit section shows as soon as a pothole is detected and an image
+  // is available. Admin Queue / Detection ID are populated AFTER submission.
   const canSubmit =
     Boolean(
       isPothole &&
-        analysis?.queued_for_admin &&
-        analysis?.detection_id != null
+        selectedImage
     );
 
   const analyzedImageUrl =
     analysis?.image
       ? `${BACKEND_URL}${analysis.image}`
       : "";
+
+  /* =======================================================
+     SUBMIT POTHOLE REPORT
+  ======================================================= */
+
+  const submitReport = async () => {
+    if (submitState !== "idle" && submitState !== "error") return;
+    if (!isPothole || !selectedImage) return;
+    if (!issueText.trim()) {
+      setSubmitError(
+        "Please describe the issue before submitting."
+      );
+      return;
+    }
+    if (!currentUser?.id || !currentUser?.email) {
+      setSubmitError(
+        "User authentication is required. Please log in and try again."
+      );
+      return;
+    }
+
+    /* -------------------------------------------------------
+       STEP 1 — get current device GPS
+    ------------------------------------------------------- */
+
+    setSubmitState("locating");
+    setSubmitError("");
+
+    let gpsCoords = null;
+
+    try {
+      gpsCoords = await new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Geolocation is not supported by this browser."));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos),
+          (err) => reject(err),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      });
+    } catch (gpsErr) {
+      setSubmitState("idle");
+      setSubmitError(
+        gpsErr?.code === 1
+          ? "Location permission is required to submit this road report. Please enable location access and try again."
+          : gpsErr?.code === 3
+            ? "GPS location timed out. Please try again in an area with better signal."
+            : gpsErr?.message ||
+              "Unable to obtain your current GPS location. Please try again."
+      );
+      return;
+    }
+
+    /* -------------------------------------------------------
+       STEP 2 — submit complaint to existing backend API
+    ------------------------------------------------------- */
+
+    setSubmitState("submitting");
+
+    try {
+      const form = new FormData();
+      form.append("user_id", currentUser.id);
+      form.append(
+        "user_name",
+        currentUser.name ||
+          currentUser.email?.split("@")[0] ||
+          "User"
+      );
+      form.append("email", currentUser.email);
+      form.append("subject", "Pothole Detected");
+      form.append("description", issueText.trim());
+      form.append("priority", "Urgent");
+      form.append("category", "Road Damage");
+      form.append(
+        "incident_latitude",
+        String(gpsCoords.coords.latitude)
+      );
+      form.append(
+        "incident_longitude",
+        String(gpsCoords.coords.longitude)
+      );
+      form.append(
+        "incident_accuracy",
+        String(gpsCoords.coords.accuracy)
+      );
+      form.append(
+        "incident_gps_time",
+        new Date(gpsCoords.timestamp).toISOString()
+      );
+      form.append("attachment", selectedImage, selectedImage.name);
+
+      const response = await fetch(
+        `${BACKEND_URL}/api/complaints`,
+        { method: "POST", body: form }
+      );
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok || !body.ok) {
+        throw new Error(
+          body.message || `Server error (HTTP ${response.status}).`
+        );
+      }
+
+      const ticketId =
+        body.complaint?.ticket_id ||
+        `INC-${body.complaint?.id}`;
+
+      setSubmittedTicketId(ticketId);
+
+      // Update the analysis cards to show the new state.
+      setAnalysis((prev) => ({
+        ...prev,
+        queued_for_admin: true,
+        detection_id: ticketId,
+      }));
+
+      setSubmitState("success");
+    } catch (submitErr) {
+      setSubmitState("error");
+      setSubmitError(
+        submitErr?.message ||
+          "Unable to submit the report. Please check your connection and try again."
+      );
+    }
+  };
 
   /* =======================================================
      UI
@@ -1252,39 +1403,75 @@ export default function CameraPage({ gps }) {
           {canSubmit && (
             <div className="camera-submit-area">
 
-              {submitted ? (
+              {submitState === "success" ? (
                 <div className="camera-submitted-message">
                   <CheckCircle2
                     size={18}
                   />
 
-                  Submitted to the
-                  administrator
-                  verification queue.
+                  <span>
+                    Report submitted successfully.
+                    {submittedTicketId && (
+                      <>
+                        {" "}Incident ID:{" "}
+                        <strong>
+                          {submittedTicketId}
+                        </strong>
+                      </>
+                    )}
+                  </span>
                 </div>
               ) : (
                 <>
                   <p>
-                    This pothole detection is
-                    ready to be submitted. It
-                    will use the existing
-                    detection record.
+                    Pothole detected. Describe
+                    the issue and submit a
+                    report to the administrator.
                   </p>
+
+                  <textarea
+                    className="camera-issue-textarea"
+                    rows={4}
+                    placeholder="Describe the road issue (e.g. multiple large potholes making it difficult for vehicles to pass)…"
+                    value={issueText}
+                    onChange={(e) =>
+                      setIssueText(e.target.value)
+                    }
+                    disabled={
+                      submitState !== "idle" &&
+                      submitState !== "error"
+                    }
+                    aria-label="Describe the road issue"
+                  />
+
+                  {submitError && (
+                    <div
+                      className="camera-error"
+                      role="alert"
+                      style={{ marginTop: 0 }}
+                    >
+                      <span>{submitError}</span>
+                    </div>
+                  )}
 
                   <button
                     type="button"
                     className="primary-button"
-                    onClick={() =>
-                      setSubmitted(
-                        true
-                      )
+                    onClick={submitReport}
+                    disabled={
+                      submitState !== "idle" &&
+                      submitState !== "error"
                     }
                   >
                     <CheckCircle2
                       size={16}
                     />
 
-                    Submit
+                    {submitState === "locating"
+                      ? "Getting location…"
+                      : submitState === "submitting"
+                        ? "Submitting…"
+                        : "Submit"}
                   </button>
                 </>
               )}

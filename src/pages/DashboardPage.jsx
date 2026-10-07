@@ -991,7 +991,7 @@ export default function LiveReadingPage({ currentUser, onLogout, onBackToSite, o
 
           {!isAccountPage && activePage === "environment" && <EnvironmentPage latest={latest} />}
 
-          {!isAccountPage && activePage === "camera" && <CameraPage gps={gps} camIp={camIp} />}
+          {!isAccountPage && activePage === "camera" && <CameraPage gps={gps} camIp={camIp} currentUser={currentUser} />}
 
           {!isAccountPage && activePage === "location" && <LocationPage gps={gps} />}
 
