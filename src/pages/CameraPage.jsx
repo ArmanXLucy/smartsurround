@@ -273,6 +273,23 @@ export default function CameraPage({ gps, currentUser }) {
   const [submittedTicketId, setSubmittedTicketId] =
     React.useState(null);
 
+  // Manual location fallback modal
+  const [showManualLocation, setShowManualLocation] =
+    React.useState(false);
+
+  const [manualLat, setManualLat] =
+    React.useState("");
+
+  const [manualLng, setManualLng] =
+    React.useState("");
+
+  const [manualLocationError, setManualLocationError] =
+    React.useState("");
+
+  // Resolver ref for manual location promise
+  const manualLocationResolveRef = React.useRef(null);
+  const manualLocationRejectRef  = React.useRef(null);
+
   const [imageSource, setImageSource] =
     React.useState("");
 
@@ -845,7 +862,10 @@ export default function CameraPage({ gps, currentUser }) {
     }
 
     /* -------------------------------------------------------
-       STEP 1 — get current device GPS
+       STEP 1 — get location via 3-layer fallback chain
+       Layer 1: Browser GPS
+       Layer 2: IP-based geolocation (ip-api.com, free)
+       Layer 3: Manual user input modal
     ------------------------------------------------------- */
 
     setSubmitState("locating");
@@ -853,40 +873,67 @@ export default function CameraPage({ gps, currentUser }) {
 
     let gpsCoords = null;
 
-    try {
-      gpsCoords = await new Promise((resolve, reject) => {
+    // --- Helper: browser geolocation ---
+    const getBrowserGPS = () =>
+      new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-          reject(new Error("Geolocation is not supported by this browser."));
+          reject(new Error("no-geolocation"));
           return;
         }
-        // First attempt: high-accuracy, 30-second timeout
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(pos),
-          (firstErr) => {
-            // If timed out, retry with low-accuracy + allow a cached position (up to 60s old)
-            if (firstErr.code === 3) {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => resolve(pos),
-                (secondErr) => reject(secondErr),
-                { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
-              );
-            } else {
-              reject(firstErr);
-            }
-          },
-          { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+          resolve,
+          (err) => reject(err),
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
         );
       });
-    } catch (gpsErr) {
+
+    // --- Helper: IP geolocation fallback ---
+    const getIPLocation = async () => {
+      const res = await fetch("https://ip-api.com/json/?fields=status,lat,lon,city");
+      const data = await res.json();
+      if (data.status !== "success") throw new Error("IP geolocation failed");
+      // Wrap in a GeolocationPosition-like object so the rest of the code works unchanged
+      return {
+        coords: {
+          latitude:  data.lat,
+          longitude: data.lon,
+          accuracy:  5000, // IP-based accuracy ~5 km
+        },
+        timestamp: Date.now(),
+        _source: "ip",
+      };
+    };
+
+    // --- Helper: manual location input modal ---
+    const getManualLocation = () =>
+      new Promise((resolve, reject) => {
+        manualLocationResolveRef.current = resolve;
+        manualLocationRejectRef.current  = reject;
+        setManualLat("");
+        setManualLng("");
+        setManualLocationError("");
+        setShowManualLocation(true);
+      });
+
+    try {
+      // Layer 1 – browser GPS
+      try {
+        gpsCoords = await getBrowserGPS();
+      } catch {
+        // Layer 2 – IP geolocation (silent, no error shown)
+        try {
+          gpsCoords = await getIPLocation();
+        } catch {
+          // Layer 3 – manual input modal
+          setSubmitState("idle"); // allow UI interaction
+          gpsCoords = await getManualLocation();
+          setSubmitState("locating");
+        }
+      }
+    } catch (locationErr) {
+      // User cancelled the manual modal
       setSubmitState("idle");
-      setSubmitError(
-        gpsErr?.code === 1
-          ? "Location permission is required to submit this road report. Please enable location access and try again."
-          : gpsErr?.code === 3
-            ? "GPS location timed out. Please ensure GPS is enabled and you have a clear sky view, then try again."
-            : gpsErr?.message ||
-              "Unable to obtain your current GPS location. Please try again."
-      );
+      setSubmitError("Location is required to submit the report.");
       return;
     }
 
@@ -1490,6 +1537,217 @@ export default function CameraPage({ gps, currentUser }) {
             </div>
           )}
         </section>
+      )}
+
+      {/* =================================================
+          MANUAL LOCATION MODAL (fallback when GPS + IP fail)
+      ================================================= */}
+
+      {showManualLocation && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(6px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              background: "var(--surface, #1e1e2e)",
+              border: "1px solid var(--border, rgba(255,255,255,0.1))",
+              borderRadius: "1rem",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: "420px",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 0.5rem",
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                color: "var(--text-primary, #fff)",
+              }}
+            >
+              📍 Enter Location Manually
+            </h3>
+
+            <p
+              style={{
+                margin: "0 0 1.25rem",
+                fontSize: "0.85rem",
+                color: "var(--text-muted, #aaa)",
+                lineHeight: 1.5,
+              }}
+            >
+              Automatic location detection failed. Open{" "}
+              <a
+                href="https://maps.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--accent, #f97316)" }}
+              >
+                Google Maps
+              </a>
+              , right-click your location and copy the coordinates, then paste
+              them below.
+            </p>
+
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                color: "var(--text-muted, #aaa)",
+                marginBottom: "0.3rem",
+              }}
+            >
+              Latitude
+            </label>
+            <input
+              type="number"
+              step="any"
+              placeholder="e.g. 28.6139"
+              value={manualLat}
+              onChange={(e) => setManualLat(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem 0.8rem",
+                borderRadius: "0.5rem",
+                border: "1px solid var(--border, rgba(255,255,255,0.15))",
+                background: "var(--surface-2, rgba(255,255,255,0.05))",
+                color: "var(--text-primary, #fff)",
+                fontSize: "0.9rem",
+                marginBottom: "0.75rem",
+                boxSizing: "border-box",
+              }}
+            />
+
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.8rem",
+                fontWeight: 500,
+                color: "var(--text-muted, #aaa)",
+                marginBottom: "0.3rem",
+              }}
+            >
+              Longitude
+            </label>
+            <input
+              type="number"
+              step="any"
+              placeholder="e.g. 77.2090"
+              value={manualLng}
+              onChange={(e) => setManualLng(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem 0.8rem",
+                borderRadius: "0.5rem",
+                border: "1px solid var(--border, rgba(255,255,255,0.15))",
+                background: "var(--surface-2, rgba(255,255,255,0.05))",
+                color: "var(--text-primary, #fff)",
+                fontSize: "0.9rem",
+                marginBottom: "0.25rem",
+                boxSizing: "border-box",
+              }}
+            />
+
+            {manualLocationError && (
+              <p
+                style={{
+                  color: "#f87171",
+                  fontSize: "0.8rem",
+                  margin: "0.4rem 0 0.75rem",
+                }}
+              >
+                {manualLocationError}
+              </p>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                marginTop: "1.25rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  const lat = parseFloat(manualLat);
+                  const lng = parseFloat(manualLng);
+
+                  if (isNaN(lat) || lat < -90 || lat > 90) {
+                    setManualLocationError(
+                      "Latitude must be a number between -90 and 90."
+                    );
+                    return;
+                  }
+                  if (isNaN(lng) || lng < -180 || lng > 180) {
+                    setManualLocationError(
+                      "Longitude must be a number between -180 and 180."
+                    );
+                    return;
+                  }
+
+                  setShowManualLocation(false);
+                  manualLocationResolveRef.current?.({
+                    coords: {
+                      latitude: lat,
+                      longitude: lng,
+                      accuracy: 100,
+                    },
+                    timestamp: Date.now(),
+                    _source: "manual",
+                  });
+                }}
+                style={{
+                  flex: 1,
+                  padding: "0.65rem",
+                  borderRadius: "0.5rem",
+                  border: "none",
+                  background: "var(--accent, #f97316)",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                }}
+              >
+                Confirm Location
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowManualLocation(false);
+                  manualLocationRejectRef.current?.(
+                    new Error("cancelled")
+                  );
+                }}
+                style={{
+                  padding: "0.65rem 1rem",
+                  borderRadius: "0.5rem",
+                  border: "1px solid var(--border, rgba(255,255,255,0.15))",
+                  background: "transparent",
+                  color: "var(--text-muted, #aaa)",
+                  fontWeight: 500,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
