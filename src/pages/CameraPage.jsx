@@ -859,10 +859,22 @@ export default function CameraPage({ gps, currentUser }) {
           reject(new Error("Geolocation is not supported by this browser."));
           return;
         }
+        // First attempt: high-accuracy, 30-second timeout
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve(pos),
-          (err) => reject(err),
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          (firstErr) => {
+            // If timed out, retry with low-accuracy + allow a cached position (up to 60s old)
+            if (firstErr.code === 3) {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => resolve(pos),
+                (secondErr) => reject(secondErr),
+                { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+              );
+            } else {
+              reject(firstErr);
+            }
+          },
+          { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
         );
       });
     } catch (gpsErr) {
@@ -871,7 +883,7 @@ export default function CameraPage({ gps, currentUser }) {
         gpsErr?.code === 1
           ? "Location permission is required to submit this road report. Please enable location access and try again."
           : gpsErr?.code === 3
-            ? "GPS location timed out. Please try again in an area with better signal."
+            ? "GPS location timed out. Please ensure GPS is enabled and you have a clear sky view, then try again."
             : gpsErr?.message ||
               "Unable to obtain your current GPS location. Please try again."
       );
